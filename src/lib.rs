@@ -104,24 +104,22 @@ mod tests {
             hex!("02f878831469ca821c1d84054c12c484490fd6b282520894b731c7d4947c5cc24984f87814878cf0e131117c89022b1c8c1227a0000080c001a01fed2cba97abd44b8236c786d94f273b50c672e5ff77ff397df708283ed90e26a0370872b3f3ad0694053dc8af16a4fa3e39bf482c0ff4937366023c8a9a3d2969").to_vec(),
         ];
 
-        let mut transactions_vec = Vec::new();
+        let mut transactions = transactions
+            .into_iter()
+            .map(List::<u8, MAX_BYTES_PER_TRANSACTION>::from_iter)
+            .collect::<Vec<_>>();
 
-        for transaction in transactions.iter() {
-            transactions_vec.push(List::<u8, MAX_BYTES_PER_TRANSACTION>::from_iter(
-                (*transaction).clone(),
-            ));
-        }
+        dbg!(transactions.len());
 
-        let transactions_conv = List::<
-            List<u8, MAX_BYTES_PER_TRANSACTION>,
-            MAX_TRANSACTIONS_PER_PAYLOAD,
-        >::from_iter(transactions_vec);
+        // NOTE: hash tree root of individual list is fine
+        let _ = transactions
+            .iter_mut()
+            .map(|t| Merkleized::hash_tree_root(t).unwrap())
+            .collect::<Vec<_>>();
 
-        let mut ssz_test = SSZTest {
-            transactions: transactions_conv,
-        };
+        let mut bundle = List::<_, MAX_TRANSACTIONS_PER_PAYLOAD>::from_iter(transactions);
 
-        let _result = ssz_test.hash_tree_root();
+        dbg!(bundle.hash_tree_root().unwrap());
     }
 
     #[test]
