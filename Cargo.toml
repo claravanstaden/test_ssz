@@ -1,0 +1,13 @@
+[package]
+name = "test_ssz"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+ssz_rs = { git = "https://github.com/Snowfork/ssz_rs", default-features = false }
+ssz_rs_derive = { git = "https://github.com/Snowfork/ssz_rs", default-features = false }
+
+[dev-dependencies]
+hex-literal = { version = "0.3.1" }
