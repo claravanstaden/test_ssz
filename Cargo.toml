@@ -6,8 +6,7 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-ssz_rs = "0.7.0"
-ssz_rs_derive = "0.7.0"
+ssz_rs = { git = "https://github.com/ralexstokes/ssz_rs" }
 
 [dev-dependencies]
 hex-literal = { version = "0.3.1" }

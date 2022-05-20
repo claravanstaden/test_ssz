@@ -1,7 +1,4 @@
-use ssz_rs::List;
-use ssz_rs::Deserialize;
-use ssz_rs_derive::SimpleSerialize;
-use ssz_rs::Sized;
+use ssz_rs::prelude::*;
 
 const MAX_BYTES_PER_TRANSACTION: usize = 1073741824;
 
@@ -9,18 +6,18 @@ const MAX_TRANSACTIONS_PER_PAYLOAD: usize = 1048576;
 
 #[derive(Default, SimpleSerialize)]
 pub struct SSZTest {
-	pub transactions: List<List<u8, MAX_BYTES_PER_TRANSACTION>, MAX_TRANSACTIONS_PER_PAYLOAD>,
+    pub transactions: List<List<u8, MAX_BYTES_PER_TRANSACTION>, MAX_TRANSACTIONS_PER_PAYLOAD>,
 }
 
 #[cfg(test)]
 mod tests {
+    use super::*;
     use crate::{SSZTest, MAX_BYTES_PER_TRANSACTION, MAX_TRANSACTIONS_PER_PAYLOAD};
     use hex_literal::hex;
-    use ssz_rs::{Merkleized, List, MerkleizationContext, Bitlist, Root};
 
     #[test]
     fn test_ssz_list() {
-        let transactions = vec![ 
+        let transactions = vec![
             hex!("02f895831469ca8301573c8447868c008459682f0083030d4094871d96f0d74b099ea3c8b7a2656ec06da1ee7bf680a4b86d1d6300000000000000000000000022007a12f6494eb73165bdc5a475771ef2255325c080a088cc0bea0de7f99bba0dbf1dcbbde7be4aaafdcd7f55b3aedf0a73ad5c9d8d44a0219df1909da683994e6c209aaef1c187d1c016112ff5d1da975bf3fc44bf33ae").to_vec(),
             hex!("02f895831469ca8301573d8447868c008459682f0083030d4094871d96f0d74b099ea3c8b7a2656ec06da1ee7bf680a4b86d1d63000000000000000000000000f1c26981dd8fd214fe9264a897d9e6cda96db648c001a072e224e49c25de6ca25f4844cb8419f2ff3109209e2a1bffbaa375f888fccdd3a00de6e29daff38a077dd311f807e63c0304bceca80ceb0d7d967f26ecca8e6682").to_vec(),
             hex!("02f895831469ca8301573e8447868c008459682f0083030d4094871d96f0d74b099ea3c8b7a2656ec06da1ee7bf680a4b86d1d630000000000000000000000004d170baa29a81df2877aa0a3fd798d4cbb92f1e8c080a0c31170b3ac41fe3c93968363cd0462e2e7886c9270407ca439d66914e72dbb41a0092c401b5334b5c4abcec700e8d5c5f31915e0da3927442a743410665fdc3cc7").to_vec(),
@@ -110,23 +107,28 @@ mod tests {
         let mut transactions_vec = Vec::new();
 
         for transaction in transactions.iter() {
-            transactions_vec.push(List::<u8, MAX_BYTES_PER_TRANSACTION>::from_iter((*transaction).clone()));
+            transactions_vec.push(List::<u8, MAX_BYTES_PER_TRANSACTION>::from_iter(
+                (*transaction).clone(),
+            ));
         }
 
-        let transactions_conv = List::<List::<u8, MAX_BYTES_PER_TRANSACTION>, MAX_TRANSACTIONS_PER_PAYLOAD>::from_iter(transactions_vec);
+        let transactions_conv = List::<
+            List<u8, MAX_BYTES_PER_TRANSACTION>,
+            MAX_TRANSACTIONS_PER_PAYLOAD,
+        >::from_iter(transactions_vec);
 
-        let ssz_test = SSZTest{
-            transactions: transactions_conv, 
+        let mut ssz_test = SSZTest {
+            transactions: transactions_conv,
         };
 
-        let _result = ssz_test.hash_tree_root(&MerkleizationContext::new());
+        let _result = ssz_test.hash_tree_root();
     }
 
     #[test]
     fn test_ssz_aggregation_bits() {
         // curl -X GET "https://lodestar-kiln.chainsafe.io/eth/v1/beacon/headers/484120
         let aggregation_bits = hex!("ffcffeff7ffffffffefbf7ffffffdff73e").to_vec();
-            
+
         let aggregation_bits_bool = convert_to_binary(aggregation_bits);
 
         // To print out the bitstring for debugging
@@ -142,63 +144,70 @@ mod tests {
 
         // Got these from https://beaconchain.kiln.themerge.dev/block/484120#attestations, the top attestation
         let bools_that_are_supposedly_correct = vec![
-            true, true, true, true, true, true, true, true, true, true, true, true, false, false, true, true, false, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, false, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, false, true, true, true, true, true, true, true, true, true, false, true, true, true, true, true, true, true, true, false, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, false, true, true, true, true, true, false, true, true, true, false, true, true, true, true, 
+            true, true, true, true, true, true, true, true, true, true, true, true, false, false,
+            true, true, false, true, true, true, true, true, true, true, true, true, true, true,
+            true, true, true, true, true, true, true, true, true, true, true, false, true, true,
+            true, true, true, true, true, true, true, true, true, true, true, true, true, true,
+            true, true, true, true, true, true, true, false, true, true, true, true, true, true,
+            true, true, true, false, true, true, true, true, true, true, true, true, false, true,
+            true, true, true, true, true, true, true, true, true, true, true, true, true, true,
+            true, true, true, true, true, true, true, true, true, true, true, true, true, true,
+            true, true, true, true, false, true, true, true, true, true, false, true, true, true,
+            false, true, true, true, true,
         ];
 
-        let aggregation_bits_bitlist = Bitlist::<2048>::from_iter(aggregation_bits_bool);
+        let mut aggregation_bits_bitlist = Bitlist::<2048>::from_iter(aggregation_bits_bool);
 
-        let aggregation_bits_correct_bitlist = Bitlist::<2048>::from_iter(bools_that_are_supposedly_correct);
+        let aggregation_bits_correct_bitlist =
+            Bitlist::<2048>::from_iter(bools_that_are_supposedly_correct);
 
         // To print out the difference between the bitlists.
         println!("{:?}", aggregation_bits_bitlist);
 
         println!("{:?}", aggregation_bits_correct_bitlist);
 
-        let hash_root = aggregation_bits_bitlist.hash_tree_root(&MerkleizationContext::new());
+        let hash_root = aggregation_bits_bitlist.hash_tree_root();
         // But interestingly, even if I use aggregation_bits_correct_bitlist to get the hash_tree_root, it doesn't give me the right hash.
         // let hash_root = aggregation_bits_correct_bitlist.hash_tree_root(&MerkleizationContext::new());
         // gives 0x1c1d476dc1cec4e593a9dc7543ddc53e646398d0db52769b36c498047534c110
 
         // Got this from https://chainsafe.github.io/ssz/, confirmed if this hash is used the attestation is merkleized to right hash
-        let correct_hash_bytes: [u8; 32] = hex!("ac4175b816fda9a6bc2a59c905a9df02383763176b58c3cd2823a53c107ff3cf").into();
+        let correct_hash_bytes: [u8; 32] =
+            hex!("ac4175b816fda9a6bc2a59c905a9df02383763176b58c3cd2823a53c107ff3cf").into();
 
-        let correct_hash = Root::from_bytes(correct_hash_bytes);
+        let correct_hash = Node::from_bytes(correct_hash_bytes);
 
-        assert_eq!(
-            hash_root.unwrap(),
-            correct_hash
-        );
+        assert_eq!(hash_root.unwrap(), correct_hash);
     }
 
+    pub fn convert_to_binary(input: Vec<u8>) -> Vec<bool> {
+        let mut result = Vec::new();
 
-pub fn convert_to_binary(input: Vec<u8>) -> Vec<bool> {
-    let mut result = Vec::new();
+        for input_decimal in input.iter() {
+            let mut tmp = Vec::new();
+            let mut remaining = *input_decimal;
 
-    for input_decimal in input.iter() {
-        let mut tmp = Vec::new();
-        let mut remaining = *input_decimal;
+            while remaining > 0 {
+                let remainder = remaining % 2;
+                if remainder == 1 {
+                    tmp.push(true);
+                } else {
+                    tmp.push(false);
+                }
 
-        while remaining > 0 {
-            let remainder = remaining % 2;
-            if remainder == 1 {
-                tmp.push(true);
-            } else {
-                tmp.push(false);
+                remaining = remaining / 2;
             }
-            
-            remaining = remaining / 2;
+
+            // pad binary with 0s if length is less than 8
+            if tmp.len() < 8 {
+                for _i in tmp.len()..8 {
+                    tmp.push(false);
+                }
+            }
+
+            result.append(&mut tmp);
         }
 
-        // pad binary with 0s if length is less than 8
-        if tmp.len() < 8 {
-            for _i in tmp.len()..8 {
-                tmp.push(false);
-            }
-        }
-
-        result.append(&mut tmp);
+        result
     }
-
-    result
-}
 }
