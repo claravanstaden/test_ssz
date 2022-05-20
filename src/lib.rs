@@ -1,18 +1,10 @@
 use ssz_rs::prelude::*;
 
-const MAX_BYTES_PER_TRANSACTION: usize = 1073741824;
-
-const MAX_TRANSACTIONS_PER_PAYLOAD: usize = 1048576;
-
-#[derive(Default, SimpleSerialize)]
-pub struct SSZTest {
-    pub transactions: List<List<u8, MAX_BYTES_PER_TRANSACTION>, MAX_TRANSACTIONS_PER_PAYLOAD>,
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{SSZTest, MAX_BYTES_PER_TRANSACTION, MAX_TRANSACTIONS_PER_PAYLOAD};
+    const MAX_BYTES_PER_TRANSACTION: usize = 1073741824;
+    const MAX_TRANSACTIONS_PER_PAYLOAD: usize = 1048576;
     use hex_literal::hex;
 
     #[test]
@@ -123,22 +115,37 @@ mod tests {
     }
 
     #[test]
+    fn test_hash_tree_root_bitlist() {
+        let mut bits: Bitlist<2048> =
+            serde_json::from_str("\"0xffcffeff7ffffffffefbf7ffffffdff73e\"").unwrap();
+
+        let root = bits.hash_tree_root().unwrap();
+
+        let correct_hash: Node = serde_json::from_str(
+            "\"0xac4175b816fda9a6bc2a59c905a9df02383763176b58c3cd2823a53c107ff3cf\"",
+        )
+        .unwrap();
+
+        assert_eq!(root, correct_hash);
+    }
+
+    #[test]
     fn test_ssz_aggregation_bits() {
         // curl -X GET "https://lodestar-kiln.chainsafe.io/eth/v1/beacon/headers/484120
         let aggregation_bits = hex!("ffcffeff7ffffffffefbf7ffffffdff73e").to_vec();
 
-        let aggregation_bits_bool = convert_to_binary(aggregation_bits);
+        // let aggregation_bits_bool = convert_to_binary(aggregation_bits);
 
         // To print out the bitstring for debugging
-        let mut bitstring_for_debugging: String = String::new();
+        // let mut bitstring_for_debugging: String = String::new();
 
-        for b in aggregation_bits_bool.iter() {
-            if *b {
-                bitstring_for_debugging.push_str("1");
-            } else {
-                bitstring_for_debugging.push_str("0");
-            }
-        }
+        // for b in aggregation_bits_bool.iter() {
+        //     if *b {
+        //         bitstring_for_debugging.push_str("1");
+        //     } else {
+        //         bitstring_for_debugging.push_str("0");
+        //     }
+        // }
 
         // Got these from https://beaconchain.kiln.themerge.dev/block/484120#attestations, the top attestation
         let bools_that_are_supposedly_correct = vec![
@@ -154,36 +161,43 @@ mod tests {
             false, true, true, true, true,
         ];
 
-        let mut aggregation_bits_bitlist = Bitlist::<2048>::from_iter(aggregation_bits_bool);
+        // let mut aggregation_bits_bitlist = Bitlist::<2048>::from_iter(aggregation_bits_bool);
 
         let aggregation_bits_correct_bitlist =
             Bitlist::<2048>::from_iter(bools_that_are_supposedly_correct);
 
         // To print out the difference between the bitlists.
-        println!("{:?}", aggregation_bits_bitlist);
+        // dbg!(&aggregation_bits_bitlist);
 
-        println!("{:?}", aggregation_bits_correct_bitlist);
+        dbg!(&aggregation_bits_correct_bitlist);
 
-        let hash_root = aggregation_bits_bitlist.hash_tree_root();
+        let mut bits: Bitlist<2048> =
+            serde_json::from_str("\"0xffcffeff7ffffffffefbf7ffffffdff73e\"").unwrap();
+
+        dbg!(&bits);
+
+        // let hash_root = aggregation_bits_bitlist.hash_tree_root();
         // But interestingly, even if I use aggregation_bits_correct_bitlist to get the hash_tree_root, it doesn't give me the right hash.
         // let hash_root = aggregation_bits_correct_bitlist.hash_tree_root(&MerkleizationContext::new());
         // gives 0x1c1d476dc1cec4e593a9dc7543ddc53e646398d0db52769b36c498047534c110
 
+        let root = bits.hash_tree_root().unwrap();
+
         // Got this from https://chainsafe.github.io/ssz/, confirmed if this hash is used the attestation is merkleized to right hash
-        let correct_hash_bytes: [u8; 32] =
-            hex!("ac4175b816fda9a6bc2a59c905a9df02383763176b58c3cd2823a53c107ff3cf").into();
+        let correct_hash: Node = serde_json::from_str(
+            "\"0xac4175b816fda9a6bc2a59c905a9df02383763176b58c3cd2823a53c107ff3cf\"",
+        )
+        .unwrap();
 
-        let correct_hash = Node::from_bytes(correct_hash_bytes);
-
-        assert_eq!(hash_root.unwrap(), correct_hash);
+        assert_eq!(root, correct_hash);
     }
 
     pub fn convert_to_binary(input: Vec<u8>) -> Vec<bool> {
         let mut result = Vec::new();
 
-        for input_decimal in input.iter() {
+        for input_decimal in input.into_iter() {
             let mut tmp = Vec::new();
-            let mut remaining = *input_decimal;
+            let mut remaining = input_decimal;
 
             while remaining > 0 {
                 let remainder = remaining % 2;
