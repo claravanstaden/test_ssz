@@ -16,7 +16,7 @@ pub struct SSZTest {
 mod tests {
     use crate::{SSZTest, MAX_BYTES_PER_TRANSACTION, MAX_TRANSACTIONS_PER_PAYLOAD};
     use hex_literal::hex;
-    use ssz_rs::{Merkleized, List, MerkleizationContext};
+    use ssz_rs::{Merkleized, List, MerkleizationContext, Bitlist, Root};
 
     #[test]
     fn test_ssz_list() {
@@ -121,4 +121,80 @@ mod tests {
 
         let _result = ssz_test.hash_tree_root(&MerkleizationContext::new());
     }
+
+    #[test]
+    fn test_ssz_aggregation_bits() {
+        // curl -X GET "https://lodestar-kiln.chainsafe.io/eth/v1/beacon/headers/484120
+        let aggregation_bits = hex!("ffcffeff7ffffffffefbf7ffffffdff73e").to_vec();
+            
+        let aggregation_bits_bool = convert_to_binary(aggregation_bits);
+
+        // To print out the bitstring for debugging
+        let mut bitstring_for_debugging: String = String::new();
+
+        for b in aggregation_bits_bool.iter() {
+            if *b {
+                bitstring_for_debugging.push_str("1");
+            } else {
+                bitstring_for_debugging.push_str("0");
+            }
+        }
+
+        // Got these from https://beaconchain.kiln.themerge.dev/block/484120#attestations, the top attestation
+        let bools_that_are_supposedly_correct = vec![
+            true, true, true, true, true, true, true, true, true, true, true, true, false, false, true, true, false, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, false, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, false, true, true, true, true, true, true, true, true, true, false, true, true, true, true, true, true, true, true, false, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, false, true, true, true, true, true, false, true, true, true, false, true, true, true, true, 
+        ];
+
+        let aggregation_bits_bitlist = Bitlist::<2048>::from_iter(aggregation_bits_bool);
+
+        let aggregation_bits_correct_bitlist = Bitlist::<2048>::from_iter(bools_that_are_supposedly_correct);
+
+        println!("{:?}", aggregation_bits_bitlist);
+
+        println!("{:?}", aggregation_bits_correct_bitlist);
+
+        let hash_root = aggregation_bits_bitlist.hash_tree_root(&MerkleizationContext::new());
+
+        // Got this from https://chainsafe.github.io/ssz/, confirmed if this hash is used the attestation is merkleized to right hash
+        let correct_hash_bytes: [u8; 32] = hex!("ac4175b816fda9a6bc2a59c905a9df02383763176b58c3cd2823a53c107ff3cf").into();
+
+        let correct_hash = Root::from_bytes(correct_hash_bytes);
+
+        assert_eq!(
+            hash_root.unwrap(),
+            correct_hash
+        );
+    }
+
+
+pub fn convert_to_binary(input: Vec<u8>) -> Vec<bool> {
+    let mut result = Vec::new();
+
+    for input_decimal in input.iter() {
+        let mut tmp = Vec::new();
+        let mut remaining = *input_decimal;
+
+        while remaining > 0 {
+            let remainder = remaining % 2;
+            if remainder == 1 {
+                tmp.push(true);
+            } else {
+                tmp.push(false);
+            }
+            
+            remaining = remaining / 2;
+        }
+
+        // pad binary with 0s if length is less than 8
+        if tmp.len() < 8 {
+            for _i in tmp.len()..8 {
+                tmp.push(false);
+            }
+        }
+
+        result.append(&mut tmp);
+    }
+
+    result
+}
 }
