@@ -119,6 +119,6 @@ mod tests {
             transactions: transactions_conv, 
         };
 
-        ssz_test.hash_tree_root();
+        let _result = ssz_test.hash_tree_root();
     }
 }
