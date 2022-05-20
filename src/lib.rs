@@ -16,7 +16,7 @@ pub struct SSZTest {
 mod tests {
     use crate::{SSZTest, MAX_BYTES_PER_TRANSACTION, MAX_TRANSACTIONS_PER_PAYLOAD};
     use hex_literal::hex;
-    use ssz_rs::{Merkleized, List};
+    use ssz_rs::{Merkleized, List, MerkleizationContext};
 
     #[test]
     fn test_ssz_list() {
@@ -113,12 +113,12 @@ mod tests {
             transactions_vec.push(List::<u8, MAX_BYTES_PER_TRANSACTION>::from_iter((*transaction).clone()));
         }
 
-        let transactions_conv = List::<List::<u8, MAX_BYTES_PER_TRANSACTION>, MAX_TRANSACTIONS_PER_PAYLOAD>::try_from(transactions_vec).unwrap();
+        let transactions_conv = List::<List::<u8, MAX_BYTES_PER_TRANSACTION>, MAX_TRANSACTIONS_PER_PAYLOAD>::from_iter(transactions_vec);
 
-        let mut ssz_test = SSZTest{
+        let ssz_test = SSZTest{
             transactions: transactions_conv, 
         };
 
-        let _result = ssz_test.hash_tree_root();
+        let _result = ssz_test.hash_tree_root(&MerkleizationContext::new());
     }
 }
