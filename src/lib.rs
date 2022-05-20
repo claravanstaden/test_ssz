@@ -149,11 +149,15 @@ mod tests {
 
         let aggregation_bits_correct_bitlist = Bitlist::<2048>::from_iter(bools_that_are_supposedly_correct);
 
+        // To print out the difference between the bitlists.
         println!("{:?}", aggregation_bits_bitlist);
 
         println!("{:?}", aggregation_bits_correct_bitlist);
 
         let hash_root = aggregation_bits_bitlist.hash_tree_root(&MerkleizationContext::new());
+        // But interestingly, even if I use aggregation_bits_correct_bitlist to get the hash_tree_root, it doesn't give me the right hash.
+        // let hash_root = aggregation_bits_correct_bitlist.hash_tree_root(&MerkleizationContext::new());
+        // gives 0x1c1d476dc1cec4e593a9dc7543ddc53e646398d0db52769b36c498047534c110
 
         // Got this from https://chainsafe.github.io/ssz/, confirmed if this hash is used the attestation is merkleized to right hash
         let correct_hash_bytes: [u8; 32] = hex!("ac4175b816fda9a6bc2a59c905a9df02383763176b58c3cd2823a53c107ff3cf").into();
